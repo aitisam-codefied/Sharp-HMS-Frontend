@@ -276,11 +276,11 @@ export default function UsersTable({
                 <div className="space-y-1">
                   <div className="flex items-center text-xs">
                     <Phone className="h-3 w-3 mr-1" />
-                    {user?.guestId?.userId?.phoneNumber}
+                    {user?.guestId?.userId?.phoneNumber || "No Phone Number Provided"}
                   </div>
-                  <div className="flex items-center text-xs">
+                  {/* <div className="flex items-center text-xs">
                     {user?.guestId?.userId?.emailAddress}
-                  </div>
+                  </div> */}
                 </div>
               </TableCell>
               <TableCell>

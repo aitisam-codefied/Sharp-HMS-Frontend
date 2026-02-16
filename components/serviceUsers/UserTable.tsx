@@ -32,6 +32,7 @@ import { useDeleteGuest } from "@/hooks/useDeleteGuest";
 import DeleteConfirmationDialog from "../company/DeleteConfirmationDialog";
 import { UserDetailsModal } from "./UserDetailsModal";
 import { EditUserModal } from "./EditUserModal";
+import { RelocateModal } from "./RelocateModal";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Tree } from "antd";
 import { PlusSquareOutlined, MinusSquareOutlined } from "@ant-design/icons";
@@ -62,6 +63,8 @@ export function UserTable({
   const [selectedViewUser, setSelectedViewUser] = useState<Guest | null>(null);
   const [editModalOpen, setEditModalOpen] = useState(false);
   const [selectedEditUser, setSelectedEditUser] = useState<Guest | null>(null);
+  const [relocateModalOpen, setRelocateModalOpen] = useState(false);
+  const [selectedRelocateUser, setSelectedRelocateUser] = useState<Guest | null>(null);
   const [forceAssignDropdown, setForceAssignDropdown] = useState(false);
   const [copiedPortId, setCopiedPortId] = useState<string | null>(null);
   const [assigningUserId, setAssigningUserId] = useState<string | null>(null);
@@ -249,7 +252,7 @@ export function UserTable({
                     </div>
 
                     {/* Email clickable */}
-                    <div className="flex items-center">
+                    {/* <div className="flex items-center">
                       <Mail className="h-3 w-3 mr-1" />
                       {user.email ? (
                         <a
@@ -261,7 +264,7 @@ export function UserTable({
                       ) : (
                         "N/A"
                       )}
-                    </div>
+                    </div> */}
                   </div>
                 </TableCell>
 
@@ -423,6 +426,7 @@ export function UserTable({
                         setViewModalOpen(true);
                         setForceAssignDropdown(false);
                       }}
+                      title="View Details"
                     >
                       <Eye className="h-4 w-4" />
                     </Button>
@@ -433,8 +437,20 @@ export function UserTable({
                         setSelectedEditUser(users[idx]);
                         setEditModalOpen(true);
                       }}
+                      title="Edit User"
                     >
                       <Edit className="h-4 w-4" />
+                    </Button>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => {
+                        setSelectedRelocateUser(users[idx]);
+                        setRelocateModalOpen(true);
+                      }}
+                      className="text-[#db7d7d] hover:text-[#db7d7d]/80 border-[#db7d7d] hover:bg-[#db7d7d]/10"
+                    >
+                      Relocate
                     </Button>
                     {/* <Button
                           variant="ghost"
@@ -488,6 +504,33 @@ export function UserTable({
         allRooms={allRooms}
         nationalities={nationalities}
       />
+
+      {selectedRelocateUser && (
+        <RelocateModal
+          isOpen={relocateModalOpen}
+          onOpenChange={setRelocateModalOpen}
+          guestId={selectedRelocateUser._id}
+          guestName={(selectedRelocateUser as any).user?.fullName || "Guest"}
+          currentBranchId={(selectedRelocateUser as any).branch?._id || ""}
+          currentLocationId={
+            (selectedRelocateUser as any).assignedRooms?.[0]?.locationId?._id ||
+            (selectedRelocateUser as any).assignedRooms?.[0]?.locationId ||
+            (selectedRelocateUser as any).assignedRooms?.[0]?.location?._id ||
+            (selectedRelocateUser as any).familyRooms?.[0]?.locationId ||
+            undefined
+          }
+          currentRoomId={
+            (selectedRelocateUser as any).assignedRooms?.[0]?._id ||
+            (selectedRelocateUser as any).assignedRooms?.[0]?.roomId?._id ||
+            (selectedRelocateUser as any).assignedRooms?.[0]?.roomId ||
+            (selectedRelocateUser as any).familyRooms?.[0]?.roomId?._id ||
+            undefined
+          }
+          onSuccess={() => {
+            setSelectedRelocateUser(null);
+          }}
+        />
+      )}
 
       <DeleteConfirmationDialog
         open={deleteDialogOpen}

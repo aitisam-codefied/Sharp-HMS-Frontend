@@ -300,19 +300,21 @@ export default function IncidentsTable({
 
       {/* === Evidence Preview Modal === */}
       <Dialog open={!!previewImage} onOpenChange={() => setPreviewImage(null)}>
-        <DialogContent className="w-[90vw] sm:max-w-3xl">
+        <DialogContent className="w-[90vw] sm:max-w-3xl max-h-[90vh] overflow-hidden flex flex-col">
           <DialogHeader>
             <DialogTitle>Evidence Preview</DialogTitle>
           </DialogHeader>
           {previewImage && (
-            <img
-              src={previewImage}
-              alt="Full Evidence"
-              className="w-full h-auto rounded-lg object-contain"
-              onError={(e) => {
-                e.currentTarget.src = incidentPlaceholder.src; // fallback image
-              }}
-            />
+            <div className="mt-4 flex-1 overflow-hidden flex items-center justify-center">
+              <img
+                src={previewImage}
+                alt="Full Evidence"
+                className="max-h-[70vh] w-auto max-w-full rounded-lg object-contain"
+                onError={(e) => {
+                  e.currentTarget.src = incidentPlaceholder.src; // fallback image
+                }}
+              />
+            </div>
           )}
         </DialogContent>
       </Dialog>

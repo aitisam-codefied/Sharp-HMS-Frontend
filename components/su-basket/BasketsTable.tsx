@@ -224,17 +224,19 @@ export const BasketsTable = ({ baskets }: BasketsTableProps) => {
                       {/* Basket count */}
                       <span>Total Items : {basket?.basket?.length}</span>
 
-                      {/* Expand/Collapse button */}
-                      <button
-                        onClick={() =>
-                          setExpandedBasketId(
-                            expandedBasketId === basket._id ? null : basket._id
-                          )
-                        }
-                        className="text-white bg-gray-400 flex items-center justify-center w-4 h-4 rounded-full text-sm font-medium"
-                      >
-                        {expandedBasketId === basket._id ? "−" : "+"}
-                      </button>
+                      {/* Expand/Collapse button - only show if items exist */}
+                      {basket?.basket?.length > 0 && (
+                        <button
+                          onClick={() =>
+                            setExpandedBasketId(
+                              expandedBasketId === basket._id ? null : basket._id
+                            )
+                          }
+                          className="text-white bg-gray-400 flex items-center justify-center w-4 h-4 rounded-full text-sm font-medium"
+                        >
+                          {expandedBasketId === basket._id ? "−" : "+"}
+                        </button>
+                      )}
                     </div>
 
                     {/* Expanded Content */}
