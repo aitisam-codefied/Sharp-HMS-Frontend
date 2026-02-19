@@ -1,8 +1,11 @@
 "use client";
 
-import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Calendar as CalendarIcon } from "lucide-react";
+import { cn } from "@/lib/utils";
 import { useState, useEffect } from "react";
+import DatePicker from "react-datepicker";
+import "react-datepicker/dist/react-datepicker.css";
 
 interface DateInputProps {
   id: string;
@@ -16,52 +19,26 @@ interface DateInputProps {
   className?: string;
 }
 
-// Convert YYYY-MM-DD to DD/MM/YYYY
-const formatToDDMMYYYY = (dateStr: string | Date | undefined): string => {
-  if (!dateStr) return "";
+// Convert YYYY-MM-DD string to Date object
+const stringToDate = (dateStr: string | Date | undefined): Date | undefined => {
+  if (!dateStr) return undefined;
   
-  let date: Date;
-  if (typeof dateStr === "string") {
-    // Check if it's already in DD/MM/YYYY format
-    if (dateStr.includes("/")) {
-      return dateStr;
-    }
-    // Assume YYYY-MM-DD format
-    date = new Date(dateStr);
-  } else {
-    date = dateStr;
+  if (dateStr instanceof Date) {
+    return isNaN(dateStr.getTime()) ? undefined : dateStr;
   }
   
-  if (isNaN(date.getTime())) return "";
-  
-  const day = String(date.getDate()).padStart(2, "0");
-  const month = String(date.getMonth() + 1).padStart(2, "0");
-  const year = date.getFullYear();
-  
-  return `${day}/${month}/${year}`;
+  // Assume YYYY-MM-DD format
+  const date = new Date(dateStr);
+  return isNaN(date.getTime()) ? undefined : date;
 };
 
-// Convert DD/MM/YYYY to YYYY-MM-DD
-const formatToYYYYMMDD = (dateStr: string): string => {
-  if (!dateStr) return "";
+// Convert Date object to YYYY-MM-DD string
+const dateToString = (date: Date | undefined): string => {
+  if (!date || isNaN(date.getTime())) return "";
   
-  // If already in YYYY-MM-DD format, return as is
-  if (dateStr.match(/^\d{4}-\d{2}-\d{2}$/)) {
-    return dateStr;
-  }
-  
-  // Parse DD/MM/YYYY format
-  const parts = dateStr.split("/");
-  if (parts.length !== 3) return "";
-  
-  const day = parts[0].padStart(2, "0");
-  const month = parts[1].padStart(2, "0");
-  const year = parts[2];
-  
-  // Validate
-  if (day.length !== 2 || month.length !== 2 || year.length !== 4) {
-    return "";
-  }
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+  const day = String(date.getDate()).padStart(2, "0");
   
   return `${year}-${month}-${day}`;
 };
@@ -77,100 +54,61 @@ export default function DateInput({
   error,
   className = "",
 }: DateInputProps) {
-  const [displayValue, setDisplayValue] = useState("");
+  const [selectedDate, setSelectedDate] = useState<Date | undefined>(
+    stringToDate(value)
+  );
 
+  // Update selectedDate when value prop changes
   useEffect(() => {
-    setDisplayValue(formatToDDMMYYYY(value));
+    setSelectedDate(stringToDate(value));
   }, [value]);
 
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    let inputValue = e.target.value;
-    
-    // If empty, clear everything
-    if (inputValue === "") {
-      setDisplayValue("");
-      onChange("");
-      return;
-    }
-    
-    // Remove non-numeric characters except /
-    inputValue = inputValue.replace(/[^\d/]/g, "");
-    
-    // Auto-format as user types
-    let formatted = inputValue;
-    // Add first slash after 2 digits
-    if (inputValue.length > 2 && !inputValue.substring(0, 3).includes("/")) {
-      formatted = inputValue.slice(0, 2) + "/" + inputValue.slice(2);
-    }
-    // Add second slash after 5 characters (DD/MM)
-    if (formatted.length > 5 && formatted.split("/").length === 2) {
-      const parts = formatted.split("/");
-      if (parts[1].length > 2) {
-        formatted = parts[0] + "/" + parts[1].slice(0, 2) + "/" + parts[1].slice(2, 6);
-      }
-    }
-    
-    // Limit to DD/MM/YYYY format (10 characters)
-    if (formatted.length <= 10) {
-      setDisplayValue(formatted);
-      
-      // Convert to YYYY-MM-DD and call onChange only when complete
-      if (formatted.length === 10) {
-        const yyyymmdd = formatToYYYYMMDD(formatted);
-        if (yyyymmdd) {
-          // Validate against min/max
-          if (min && yyyymmdd < min) {
-            return; // Don't update if less than min
-          }
-          if (max && yyyymmdd > max) {
-            return; // Don't update if greater than max
-          }
-          onChange(yyyymmdd);
-        }
-      }
-    }
-  };
+  // Convert min/max strings to Date objects
+  const minDate = min ? new Date(min) : undefined;
+  const maxDate = max ? new Date(max) : undefined;
 
-  const handleBlur = () => {
-    // Validate and format on blur
-    if (displayValue && displayValue.length === 10) {
-      const yyyymmdd = formatToYYYYMMDD(displayValue);
-      if (yyyymmdd) {
-        // Validate against min/max
-        if (min && yyyymmdd < min) {
-          setDisplayValue(formatToDDMMYYYY(min));
-          onChange(min);
-        } else if (max && yyyymmdd > max) {
-          setDisplayValue(formatToDDMMYYYY(max));
-          onChange(max);
-        } else {
-          onChange(yyyymmdd);
-        }
-      } else {
-        // Invalid format, reset to empty or previous value
-        setDisplayValue(formatToDDMMYYYY(value));
-      }
-    } else if (displayValue && displayValue.length > 0 && displayValue.length < 10) {
-      // Incomplete date, reset
-      setDisplayValue(formatToDDMMYYYY(value));
+  const handleDateChange = (date: Date | null) => {
+    if (date) {
+      setSelectedDate(date);
+      const dateString = dateToString(date);
+      onChange(dateString);
+    } else {
+      setSelectedDate(undefined);
+      onChange("");
     }
   };
 
   return (
-    <div className="space-y-1">
+    <div className={cn("space-y-1", className)}>
       <Label htmlFor={id} className="text-gray-700 font-medium">
         {label} {required && "*"}
       </Label>
-      <Input
-        id={id}
-        type="text"
-        placeholder="DD/MM/YYYY"
-        value={displayValue}
-        onChange={handleChange}
-        onBlur={handleBlur}
-        maxLength={10}
-        className={`mt-1 rounded-lg border-gray-300 focus:border-[#F87D7D] focus:ring-[#F87D7D] ${className}`}
-      />
+      <div className="relative mt-1">
+        <DatePicker
+          id={id}
+          selected={selectedDate || null}
+          onChange={handleDateChange}
+          minDate={minDate}
+          maxDate={maxDate}
+          dateFormat="dd/MM/yyyy"
+          placeholderText="Select date"
+          className={cn(
+            "w-full rounded-lg border border-gray-300 px-3 py-2 text-sm",
+            "focus:border-[#F87D7D] focus:outline-none focus:ring-2 focus:ring-[#F87D7D] focus:ring-offset-0",
+            "disabled:cursor-not-allowed disabled:opacity-50",
+            !selectedDate && "text-gray-500",
+            error && "border-red-500 focus:border-red-500 focus:ring-red-500"
+          )}
+          showYearDropdown
+          showMonthDropdown
+          dropdownMode="select"
+          yearDropdownItemNumber={100}
+          scrollableYearDropdown
+          calendarClassName="!shadow-lg !border-gray-200"
+          wrapperClassName="w-full"
+        />
+        <CalendarIcon className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400 pointer-events-none" />
+      </div>
       {error && <p className="text-red-500 text-sm mt-1">{error}</p>}
     </div>
   );

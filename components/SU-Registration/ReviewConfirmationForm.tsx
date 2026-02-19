@@ -6,6 +6,8 @@ import { Button } from "@/components/ui/button";
 import { useBranches } from "@/hooks/useGetBranches";
 import dynamic from "next/dynamic";
 import html2pdf from "html2pdf.js";
+import { Loader2, CheckCircle2 } from "lucide-react";
+import { useToast } from "@/hooks/use-toast";
 
 const SignaturePad = dynamic(() => import("react-signature-pad-wrapper"), {
   ssr: false,
@@ -22,6 +24,11 @@ export default function ReviewConfirmationForm({
   const sigRef = useRef<SignaturePad | null>(null);
   const suSigRef = useRef<SignaturePad | null>(null); // Added ref for service user signature
   const formRef = useRef<HTMLDivElement | null>(null);
+  const [isSavingAdminSig, setIsSavingAdminSig] = useState(false);
+  const [isSavingSUSig, setIsSavingSUSig] = useState(false);
+  const [adminSigSaved, setAdminSigSaved] = useState(false);
+  const [suSigSaved, setSuSigSaved] = useState(false);
+  const { toast } = useToast();
 
   const getBranchName = (branchId: string) => {
     return branchData?.find((b: any) => b._id === branchId)?.name || branchId;
@@ -34,8 +41,16 @@ export default function ReviewConfirmationForm({
     }));
   };
 
-  const saveSignature = () => {
-    if (sigRef.current) {
+  const saveSignature = async () => {
+    if (!sigRef.current) return;
+    
+    setIsSavingAdminSig(true);
+    setAdminSigSaved(false);
+    
+    try {
+      // Small delay to show loading state
+      await new Promise((resolve) => setTimeout(resolve, 300));
+      
       const dataUrl = sigRef.current.toDataURL("image/png");
 
       // Convert base64 → Blob
@@ -57,6 +72,21 @@ export default function ReviewConfirmationForm({
         ...prev,
         signature: file, // UploadedFile format
       }));
+      
+      setAdminSigSaved(true);
+      toast({
+        title: "Success",
+        description: "Admin signature saved successfully",
+      });
+    } catch (error) {
+      console.error("Error saving signature:", error);
+      toast({
+        title: "Error",
+        description: "Failed to save signature",
+        variant: "destructive",
+      });
+    } finally {
+      setIsSavingAdminSig(false);
     }
   };
 
@@ -69,11 +99,21 @@ export default function ReviewConfirmationForm({
       ...prev,
       signature: "", // state se bhi clear
     }));
+    
+    setAdminSigSaved(false);
   };
 
-  const saveSUSignature = () => {
+  const saveSUSignature = async () => {
     // Added function to save service user signature
-    if (suSigRef.current) {
+    if (!suSigRef.current) return;
+    
+    setIsSavingSUSig(true);
+    setSuSigSaved(false);
+    
+    try {
+      // Small delay to show loading state
+      await new Promise((resolve) => setTimeout(resolve, 300));
+      
       const dataUrl = suSigRef.current.toDataURL("image/png");
 
       // Convert base64 → Blob
@@ -95,6 +135,21 @@ export default function ReviewConfirmationForm({
         ...prev,
         suSignature: file, // UploadedFile format
       }));
+      
+      setSuSigSaved(true);
+      toast({
+        title: "Success",
+        description: "Service user signature saved successfully",
+      });
+    } catch (error) {
+      console.error("Error saving signature:", error);
+      toast({
+        title: "Error",
+        description: "Failed to save signature",
+        variant: "destructive",
+      });
+    } finally {
+      setIsSavingSUSig(false);
     }
   };
 
@@ -108,6 +163,8 @@ export default function ReviewConfirmationForm({
       ...prev,
       suSignature: "", // state se bhi clear
     }));
+    
+    setSuSigSaved(false);
   };
 
   const [pdf, setPdf] = useState<File | null>(null);
@@ -704,13 +761,27 @@ export default function ReviewConfirmationForm({
             <div className="flex flex-wrap gap-4 mt-4">
               <Button
                 onClick={saveSignature}
-                className="bg-[#F87D7D] hover:bg-[#E66B6B] text-white font-semibold py-2 px-6 rounded-lg transition-colors duration-200"
+                disabled={isSavingAdminSig}
+                className="bg-[#F87D7D] hover:bg-[#E66B6B] text-white font-semibold py-2 px-6 rounded-lg transition-colors duration-200 disabled:opacity-70 disabled:cursor-not-allowed"
               >
-                Save Signature
+                {isSavingAdminSig ? (
+                  <>
+                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                    Saving...
+                  </>
+                ) : adminSigSaved ? (
+                  <>
+                    <CheckCircle2 className="h-4 w-4 mr-2" />
+                    Saved
+                  </>
+                ) : (
+                  "Save Signature"
+                )}
               </Button>
               <Button
                 onClick={clearSignature}
                 variant="outline"
+                disabled={isSavingAdminSig}
                 className="text-red-500 border-red-500 hover:bg-red-50"
               >
                 Clear Signature
@@ -748,13 +819,27 @@ export default function ReviewConfirmationForm({
             <div className="flex flex-wrap gap-4 mt-4">
               <Button
                 onClick={saveSUSignature}
-                className="bg-[#F87D7D] hover:bg-[#E66B6B] text-white font-semibold py-2 px-6 rounded-lg transition-colors duration-200"
+                disabled={isSavingSUSig}
+                className="bg-[#F87D7D] hover:bg-[#E66B6B] text-white font-semibold py-2 px-6 rounded-lg transition-colors duration-200 disabled:opacity-70 disabled:cursor-not-allowed"
               >
-                Save Signature
+                {isSavingSUSig ? (
+                  <>
+                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                    Saving...
+                  </>
+                ) : suSigSaved ? (
+                  <>
+                    <CheckCircle2 className="h-4 w-4 mr-2" />
+                    Saved
+                  </>
+                ) : (
+                  "Save Signature"
+                )}
               </Button>
               <Button
                 onClick={clearSUSignature}
                 variant="outline"
+                disabled={isSavingSUSig}
                 className="text-red-500 border-red-500 hover:bg-red-50"
               >
                 Clear Signature
