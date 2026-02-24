@@ -9,7 +9,6 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
   Select,
@@ -18,52 +17,46 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Filter, Search, Utensils } from "lucide-react";
-import { useToast } from "@/hooks/use-toast";
+import { Search, Utensils } from "lucide-react";
 import { useGetMealMarkings } from "@/hooks/useGetMealMarking";
 import MealsStats from "@/components/meals/MealsStats";
 import MealsTable from "@/components/meals/MealsTable";
-import { set } from "date-fns";
 import { useCompanies } from "@/hooks/useCompnay";
 
 export default function MealsPage() {
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedBranch, setSelectedBranch] = useState("all");
   const [selectedCompany, setSelectedCompany] = useState("all");
-  const [selectedMeal, setSelectedMeal] = useState("all");
-  const [selectedDate, setSelectedDate] = useState("");
+  type MealDetail = {
+    marked: boolean;
+    time: string | null;
+    staff: string | null;
+    reasonIfNotTaken: string | null;
+    notes: string | null;
+    markedAt: string | null;
+    isEditable: boolean;
+  };
+
   type Resident = {
     id: string;
     name: string;
+    portNumber: string;
     room: string;
     branch: string;
     branchId: string;
     meals: {
-      breakfast: {
-        marked: boolean;
-        time: string | null;
-        staff: string | null;
-      };
-      lunch: {
-        marked: boolean;
-        time: string | null;
-        staff: string | null;
-      };
-      dinner: {
-        marked: boolean;
-        time: string | null;
-        staff: string | null;
-      };
+      breakfast: MealDetail;
+      lunch: MealDetail;
+      dinner: MealDetail;
     };
-    dietary: any[];
+    totalMealsTaken: number;
+    mealDate: string | null;
     lastMeal: string;
     markingId: string;
   };
 
   const [residents, setResidents] = useState<Resident[]>([]);
-  // const [branches, setBranches] = useState([]);
-  const [currentPage, setCurrentPage] = useState(1); // Pagination state
-  const { toast } = useToast();
+  const [currentPage, setCurrentPage] = useState(1);
 
   const { data, isLoading } = useGetMealMarkings();
   const { data: CompanyData } = useCompanies();
@@ -84,53 +77,41 @@ export default function MealsPage() {
   }));
 
   useEffect(() => {
-    console.log("meal dataaaaa", data);
-  });
-
-  useEffect(() => {
     if (data) {
-      const mappedResidents = data.map((item: any) => ({
-        id: item?.guestId?.userId.portNumber,
-        name: item?.guestId?.userId.fullName.trim(),
-        portNumber: item?.guestId?.userId.portNumber,
-        room: item?.guestId?.familyId, // Using familyId as a proxy for room
-        branch: item?.branchId?.name,
-        branchId: item?.branchId?._id,
-        meals: {
-          breakfast: {
-            marked:
-              item?.details[item.details.length - 1]?.meals?.breakfast?.taken,
-            time: item?.details[item.details.length - 1]?.meals?.breakfast
-              ?.time,
-            staff: item?.staffId?.fullName || null,
-            reasonIfNotTaken:
-              item?.details[item.details.length - 1]?.meals?.breakfast
-                ?.reasonIfNotTaken, // New field for reason if not taken
-          },
-          lunch: {
-            marked: item?.details[item.details.length - 1]?.meals?.lunch?.taken,
-            time: item?.details[item.details.length - 1]?.meals?.lunch?.time,
-            staff: item?.staffId?.fullName || null,
-            reasonIfNotTaken:
-              item?.details[item.details.length - 1]?.meals?.lunch
-                ?.reasonIfNotTaken, // New field for reason if not taken
-          },
-          dinner: {
-            marked:
-              item?.details[item.details.length - 1]?.meals?.dinner?.taken,
-            time: item?.details[item.details.length - 1]?.meals?.dinner?.time,
-            staff: item?.staffId?.fullName || null,
-            reasonIfNotTaken:
-              item?.details[item.details.length - 1]?.meals?.dinner
-                ?.reasonIfNotTaken, // New field for reason if not taken
-          },
-        },
+      const mappedResidents = data.map((item: any) => {
+        const latestDetail = item?.details?.[item.details.length - 1];
+        const meals = latestDetail?.meals;
 
-        lastMeal: "None",
-        markingId: item._id,
-      }));
+        const mapMeal = (meal: any) => ({
+          marked: meal?.taken ?? false,
+          time: meal?.time || null,
+          staff: item?.staffId?.fullName || null,
+          reasonIfNotTaken: meal?.reasonIfNotTaken || null,
+          notes: meal?.notes || null,
+          markedAt: meal?.markedAt || null,
+          isEditable: meal?.isEditable ?? true,
+        });
+
+        return {
+          id: item?.guestId?.userId.portNumber,
+          name: item?.guestId?.userId.fullName.trim(),
+          portNumber: item?.guestId?.userId.portNumber,
+          room: item?.guestId?.familyId,
+          branch: item?.branchId?.name,
+          branchId: item?.branchId?._id,
+          meals: {
+            breakfast: mapMeal(meals?.breakfast),
+            lunch: mapMeal(meals?.lunch),
+            dinner: mapMeal(meals?.dinner),
+          },
+          totalMealsTaken: latestDetail?.totalMealsTaken ?? 0,
+          mealDate: latestDetail?.date || null,
+          lastMeal: "None",
+          markingId: item._id,
+        };
+      });
       setResidents(mappedResidents);
-      setCurrentPage(1); // Reset to first page when data changes
+      setCurrentPage(1);
     }
   }, [data]);
 

@@ -1,7 +1,5 @@
 "use client";
 
-import { Badge } from "@/components/ui/badge";
-import { Checkbox } from "@/components/ui/checkbox";
 import {
   Table,
   TableBody,
@@ -10,11 +8,111 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-
-import { Check, CheckCircle, Clock, Copy } from "lucide-react";
-import { useEffect, useState } from "react";
+import {
+  Check,
+  CheckCircle,
+  Copy,
+  XCircle,
+  AlertCircle,
+  StickyNote,
+  UserCheck,
+} from "lucide-react";
+import { useState } from "react";
 import { CustomPagination } from "../CustomPagination";
 import Link from "next/link";
+
+type MealInfo = {
+  marked: boolean;
+  time: string | null;
+  staff: string | null;
+  reasonIfNotTaken: string | null;
+  notes: string | null;
+  markedAt: string | null;
+  isEditable: boolean;
+};
+
+function formatTime(dateString: string | null) {
+  if (!dateString) return null;
+  return new Date(dateString).toLocaleString("en-GB", {
+    hour: "2-digit",
+    minute: "2-digit",
+    hour12: true,
+  });
+}
+
+function formatDate(dateString: string | null) {
+  if (!dateString) return null;
+  return new Date(dateString).toLocaleString("en-GB", {
+    day: "numeric",
+    month: "short",
+    year: "numeric",
+  });
+}
+
+function MealCell({ meal }: { meal: MealInfo }) {
+  if (meal.marked) {
+    return (
+      <div className="space-y-1.5">
+        <div className="flex items-center gap-1.5">
+          <CheckCircle className="h-3.5 w-3.5 text-green-500 shrink-0" />
+          <span className="text-xs font-medium text-green-700">Delivered</span>
+        </div>
+
+        {meal.markedAt && (
+          <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
+            <UserCheck className="h-3 w-3 shrink-0" />
+            <span>Marked at {formatTime(meal.markedAt)}</span>
+          </div>
+        )}
+
+        {meal.notes && (
+          <div className="flex items-start gap-1.5 text-xs text-muted-foreground">
+            <StickyNote className="h-3 w-3 shrink-0 mt-0.5" />
+            <span>{meal.notes}</span>
+          </div>
+        )}
+      </div>
+    );
+  }
+
+  if (!meal.isEditable) {
+    return (
+      <div className="space-y-1.5">
+        <div className="flex items-center gap-1.5">
+          <XCircle className="h-3.5 w-3.5 text-red-500 shrink-0" />
+          <span className="text-xs font-medium text-red-700">Not Taken</span>
+        </div>
+
+        {meal.reasonIfNotTaken && (
+          <div className="text-xs bg-red-50 text-red-700 border border-red-200 px-2 py-1 rounded-md w-fit">
+            {meal.reasonIfNotTaken}
+          </div>
+        )}
+
+        {meal.markedAt && (
+          <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
+            <UserCheck className="h-3 w-3 shrink-0" />
+            <span>Marked at {formatTime(meal.markedAt)}</span>
+          </div>
+        )}
+
+        {meal.notes && (
+          <div className="flex items-start gap-1.5 text-xs text-muted-foreground">
+            <StickyNote className="h-3 w-3 shrink-0 mt-0.5" />
+            <span>{meal.notes}</span>
+          </div>
+        )}
+      </div>
+    );
+  }
+
+  return (
+    <div className="flex items-center gap-1.5">
+      <AlertCircle className="h-3.5 w-3.5 text-amber-500 shrink-0" />
+      <span className="text-xs font-medium text-amber-700">Pending</span>
+    </div>
+  );
+}
 
 export default function MealsTable({
   residents,
@@ -30,18 +128,6 @@ export default function MealsTable({
     startIndex + itemsPerPage
   );
 
-  useEffect(() => {
-    console.log("residents", residents);
-  });
-
-  const formatDate = (dateString: any) => {
-    return new Date(dateString).toLocaleString("en-GB", {
-      day: "numeric",
-      month: "short",
-      year: "numeric",
-    });
-  };
-
   return (
     <div>
       <div className="rounded-md border">
@@ -51,6 +137,7 @@ export default function MealsTable({
               <TableHead>Resident</TableHead>
               <TableHead>Port Number</TableHead>
               <TableHead>Branch</TableHead>
+              <TableHead>Date</TableHead>
               <TableHead>Breakfast</TableHead>
               <TableHead>Lunch</TableHead>
               <TableHead>Dinner</TableHead>
@@ -58,7 +145,7 @@ export default function MealsTable({
           </TableHeader>
           <TableBody>
             {paginatedResidents.map((resident: any) => (
-              <TableRow key={resident.id}>
+              <TableRow key={resident.id + resident.markingId}>
                 <TableCell>
                   <Link
                     href={`/service-users?highlight=${resident.name}`}
@@ -70,19 +157,19 @@ export default function MealsTable({
                   </Link>
                 </TableCell>
 
-                <TableCell className="flex items-center justify-start gap-1">
-                  <div className="">{resident?.portNumber}</div>
-                  <div>
+                <TableCell>
+                  <div className="flex items-center gap-1">
+                    <span className="text-sm">{resident?.portNumber}</span>
                     {resident?.portNumber && (
                       <button
                         onClick={() => {
                           navigator.clipboard.writeText(resident?.portNumber);
-                          setCopiedPortId(resident.id); // jis user ka copy kiya uska id set
-                          setTimeout(() => setCopiedPortId(null), 2000); // 2 sec baad reset
+                          setCopiedPortId(resident.markingId);
+                          setTimeout(() => setCopiedPortId(null), 2000);
                         }}
                         className="text-gray-500 hover:text-black transition-colors"
                       >
-                        {copiedPortId === resident.id ? (
+                        {copiedPortId === resident.markingId ? (
                           <Check size={14} className="text-green-600" />
                         ) : (
                           <Copy size={14} />
@@ -93,98 +180,27 @@ export default function MealsTable({
                 </TableCell>
 
                 <TableCell>
-                  <div className="space-y-1">
-                    <div className="text-sm font-medium">{resident.branch}</div>
-                  </div>
+                  <span className="text-sm font-medium">{resident.branch}</span>
                 </TableCell>
 
                 <TableCell>
-                  <div className="flex items-center space-x-2">
-                    {resident.meals.breakfast.marked === true ? (
-                      <>
-                        <CheckCircle className="h-3 w-3 text-green-500" />
-                        <span className="text-xs"> Delivered</span>
-                      </>
-                    ) : (
-                      <>
-                        <Clock className="h-3 w-3 text-red-600" />
-                        <span className="text-xs">Not Delivered</span>
-                      </>
-                    )}
-                    <br />
-                    {resident.meals.breakfast.marked === true && (
-                      <div className="text-xs text-muted-foreground">
-                        <div>{formatDate(resident.meals.breakfast.time)}</div>
-                      </div>
-                    )}
-
-                    {resident.meals.breakfast.marked === false &&
-                      resident.meals.breakfast.reasonIfNotTaken && (
-                        <div className="text-xs bg-green-100 text-green-800 px-3 py-1 w-fit rounded-xl">
-                          {resident.meals.breakfast.reasonIfNotTaken
-                            ? resident.meals.breakfast.reasonIfNotTaken
-                            : "No reason provided"}
-                        </div>
-                      )}
-                  </div>
+                  <span className="text-sm text-muted-foreground">
+                    {resident.mealDate
+                      ? formatDate(resident.mealDate)
+                      : "No data"}
+                  </span>
                 </TableCell>
-                <TableCell>
-                  <div className="flex items-center space-x-2">
-                    {resident.meals.lunch.marked === true ? (
-                      <>
-                        <CheckCircle className="h-3 w-3 text-green-500" />
-                        <span className="text-xs"> Delivered</span>
-                      </>
-                    ) : (
-                      <>
-                        <Clock className="h-3 w-3 text-red-600" />
-                        <span className="text-xs">Not Delivered</span>
-                      </>
-                    )}
-                    {resident.meals.lunch.marked === true && (
-                      <div className="text-xs text-muted-foreground">
-                        <div>{formatDate(resident.meals.lunch.time)}</div>
-                      </div>
-                    )}
 
-                    {resident.meals.lunch.marked === false &&
-                      resident.meals.lunch.reasonIfNotTaken && (
-                        <div className="text-xs bg-green-100 text-green-800 px-3 py-1 w-fit rounded-xl">
-                          {resident.meals.lunch.reasonIfNotTaken
-                            ? resident.meals.lunch.reasonIfNotTaken
-                            : "No reason provided"}
-                        </div>
-                      )}
-                  </div>
+                <TableCell>
+                  <MealCell meal={resident.meals.breakfast} />
                 </TableCell>
-                <TableCell>
-                  <div className="flex items-center space-x-2">
-                    {resident.meals.dinner.marked === true ? (
-                      <>
-                        <CheckCircle className="h-3 w-3 text-green-500" />
-                        <span className="text-xs"> Delivered</span>
-                      </>
-                    ) : (
-                      <>
-                        <Clock className="h-3 w-3 text-red-600" />
-                        <span className="text-xs">Not Delivered</span>
-                      </>
-                    )}
-                    {resident.meals.dinner.marked === true && (
-                      <div className="text-xs text-muted-foreground">
-                        <div>{formatDate(resident.meals.dinner.time)}</div>
-                      </div>
-                    )}
 
-                    {resident.meals.dinner.marked === false &&
-                      resident.meals.dinner.reasonIfNotTaken && (
-                        <div className="text-xs bg-green-100 text-green-800 px-3 py-1 w-fit rounded-xl">
-                          {resident.meals.dinner.reasonIfNotTaken
-                            ? resident.meals.dinner.reasonIfNotTaken
-                            : "No reason provided"}
-                        </div>
-                      )}
-                  </div>
+                <TableCell>
+                  <MealCell meal={resident.meals.lunch} />
+                </TableCell>
+
+                <TableCell>
+                  <MealCell meal={resident.meals.dinner} />
                 </TableCell>
               </TableRow>
             ))}
